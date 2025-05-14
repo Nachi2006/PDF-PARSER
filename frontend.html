@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PDF Q&A Agent</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Google Fonts: Darker Grotesque for headings, Lato for body -->
+  <link href="https://fonts.googleapis.com/css?family=Darker+Grotesque:700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Lato:400,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --background: #181A1B;
+      --surface: #232526;
+      --accent: #4F8CFF;
+      --text-primary: #F5F6FA;
+      --text-secondary: #A0A4B8;
+      --border: #292B2F;
+      --input-bg: #232526;
+      --input-border: #35373B;
+      --radius: 10px;
+      --transition: 0.2s cubic-bezier(.4,0,.2,1);
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: var(--background);
+      color: var(--text-primary);
+      font-family: 'Lato', Arial, sans-serif;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+      padding: 2.5rem 2rem 2rem 2rem;
+      max-width: 420px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 1.8rem;
+      border: 1px solid var(--border);
+    }
+
+    .branding {
+      font-family: 'Darker Grotesque', Arial, sans-serif;
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--text-primary);
+      text-align: center;
+      margin-bottom: 0.2rem;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 1rem;
+      letter-spacing: 0.2px;
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.3rem;
+    }
+
+    label {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.4rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    input[type="file"] {
+      background: var(--input-bg);
+      color: var(--text-primary);
+      border-radius: var(--radius);
+      border: 1px solid var(--input-border);
+      padding: 0.7rem;
+      font-size: 1rem;
+      outline: none;
+      transition: border var(--transition);
+      cursor: pointer;
+    }
+
+    input[type="file"]:focus {
+      border-color: var(--accent);
+    }
+
+    .question-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    input[type="text"] {
+      background: var(--input-bg);
+      color: var(--text-primary);
+      border-radius: var(--radius);
+      border: 1px solid var(--input-border);
+      padding: 0.7rem;
+      font-size: 1rem;
+      outline: none;
+      transition: border var(--transition);
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      padding: 0.85rem;
+      font-size: 1.1rem;
+      font-family: 'Darker Grotesque', Arial, sans-serif;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(79,140,255,0.10);
+      transition: background var(--transition), box-shadow var(--transition);
+    }
+
+    button:hover, button:focus {
+      background: #3466c2;
+      box-shadow: 0 4px 16px rgba(79,140,255,0.18);
+      outline: none;
+    }
+
+    .response {
+      background: #20232a;
+      color: var(--text-primary);
+      border-radius: var(--radius);
+      padding: 1rem;
+      font-size: 1.02rem;
+      margin-top: 0.8rem;
+      min-height: 60px;
+      border: 1px solid var(--input-border);
+      word-break: break-word;
+      white-space: pre-line;
+      transition: border var(--transition);
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 1.2rem 0.5rem 1.2rem 0.5rem;
+        max-width: 98vw;
+      }
+      .branding {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="branding">PDF Q&A Agent</div>
+    <div class="subtitle">Upload a PDF and ask questions. Powered by AI.</div>
+    <form id="upload-form">
+      <label for="pdf">Upload PDF</label>
+      <input type="file" id="pdf" name="pdf" accept="application/pdf" required>
+      <button type="submit">Upload & Process</button>
+    </form>
+    <form id="question-form" style="display:none;">
+      <div class="question-group">
+        <label for="question">Ask a Question</label>
+        <input type="text" id="question" name="question" placeholder="Type your question..." autocomplete="off" required>
+      </div>
+      <button type="submit">Get Answer</button>
+    </form>
+    <div class="response" id="response" style="display:none;"></div>
+  </div>
+  <script>
+    const uploadForm = document.getElementById('upload-form');
+    const questionForm = document.getElementById('question-form');
+    const responseDiv = document.getElementById('response');
+    let pdfUploaded = false;
+
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fileInput = document.getElementById('pdf');
+      if (!fileInput.files.length) return;
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      uploadForm.querySelector('button').textContent = 'Uploading...';
+      uploadForm.querySelector('button').disabled = true;
+      try {
+        const res = await fetch('/upload', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (res.ok) {
+          pdfUploaded = true;
+          uploadForm.style.display = 'none';
+          questionForm.style.display = 'flex';
+          responseDiv.style.display = 'none';
+        } else {
+          alert(data.detail || 'Upload failed');
+        }
+      } catch (err) {
+        alert('Upload failed');
+      } finally {
+        uploadForm.querySelector('button').textContent = 'Upload & Process';
+        uploadForm.querySelector('button').disabled = false;
+      }
+    });
+
+    questionForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const questionInput = document.getElementById('question');
+      const question = questionInput.value.trim();
+      if (!question) return;
+      responseDiv.style.display = 'block';
+      responseDiv.textContent = 'Thinking...';
+      try {
+        const res = await fetch('/ask', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({question})
+        });
+        const data = await res.json();
+        if (res.ok) {
+          responseDiv.textContent = data.answer;
+        } else {
+          responseDiv.textContent = data.detail || 'Error getting answer';
+        }
+      } catch (err) {
+        responseDiv.textContent = 'Error getting answer';
+      }
+      questionInput.value = '';
+    });
+  </script>
+</body>
+</html>
+
